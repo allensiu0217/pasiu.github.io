@@ -1,11 +1,362 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-Hant">
 <head>
- <meta charset="UTF-8">
- <title>我的 GitHub Pages 網站</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K1 快樂單字大冒險 (語音版)</title>
+    <style>
+        /* =========================================
+           1. 整體風格設定 (Crayon Style)
+           ========================================= */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@500;700&display=swap');
+
+        body {
+            background-color: #FFF5D7;
+            font-family: 'Fredoka One', 'Noto Sans TC', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            background-color: #FFFFFF;
+            width: 95%;
+            max-width: 650px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 8px solid #FFCC80;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        /* =========================================
+           2. 數值與進度條 (Progress & Stats)
+           ========================================= */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .stat-box {
+            background-color: #E0F7FA;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 3px solid #4DD0E1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #progress-container {
+            width: 100%;
+            height: 15px;
+            background-color: #eee;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD54F, #FB8C00);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        /* =========================================
+           3. 互動區 (Gameplay)
+           ========================================= */
+        h1 { color: #FF7043; font-size: 1.8rem; margin: 5px 0; }
+        #letter-hint { font-size: 2.8rem; color: #AB47BC; margin-bottom: 10px; }
+        
+        #question-area {
+            position: relative;
+            cursor: pointer;
+        }
+
+        #question-emoji { 
+            font-size: 8rem; 
+            margin: 10px 0; 
+            display: block; 
+            animation: float 3s ease-in-out infinite; 
+        }
+
+        /* 喇叭按鈕 */
+        #speak-btn {
+            background: #FF7043;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 0 #D84315;
+        }
+
+        #speak-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .options-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .option-btn {
+            background-color: #4FC3F7;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 15px 30px;
+            font-size: 1.8rem;
+            font-family: inherit;
+            cursor: pointer;
+            flex: 1;
+            min-width: 140px;
+            box-shadow: 0 6px 0 #0288D1;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .option-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #0288D1; }
+
+        #feedback-msg { height: 35px; font-size: 1.5rem; margin-top: 10px; font-weight: bold; opacity: 0; }
+
+        /* =========================================
+           4. 結局 (Ending)
+           ========================================= */
+        #end-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .confetti { position: absolute; width: 10px; height: 10px; animation: fall linear forwards; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+    </style>
 </head>
 <body>
- <h1>你好！GitHub Pages 已經成功運作 🎉</h1>
- <p>呢度係我嘅第一個 GitHub Pages 頁面。</p>
+
+    <div id="game-container">
+        <div class="stats-bar">
+            <div class="stat-box">學習進度: <span id="score-display">0</span>/26</div>
+            <div class="stat-box">電力: <span id="energy-text">100</span>%</div>
+        </div>
+
+        <div id="progress-container">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="game-play-area">
+            <div id="letter-hint">Letter A</div>
+            <h1>What is this?</h1>
+            
+            <div id="question-area" onclick="speakCurrentWord()">
+                <div id="question-emoji">🍎</div>
+                <button id="speak-btn">🔊</button>
+            </div>
+
+            <div id="feedback-msg">Good Job!</div>
+            
+            <div class="options-container">
+                <button class="option-btn" id="btn-left" onclick="checkAnswer(0)"></button>
+                <button class="option-btn" id="btn-right" onclick="checkAnswer(1)"></button>
+            </div>
+        </div>
+
+        <div id="end-screen">
+            <div id="end-emoji" style="font-size: 5rem;">🏆</div>
+            <h1 id="end-title">You Win!</h1>
+            <p id="end-message" style="font-size: 1.5rem; color: #555;"></p>
+            <button id="restart-btn" onclick="restartGame()" style="background:#66BB6A; color:white; padding:15px 40px; border:none; border-radius:50px; font-size:1.8rem; cursor:pointer; margin-top:20px;">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 【題庫區】
+        // =========================================================================
+        const masterLibrary = {
+            'A': [ { emoji: '🍎', answer: 'Apple', wrong: 'Ball' }, { emoji: '🐜', answer: 'Ant', wrong: 'Dog' }, { emoji: '🚑', answer: 'Ambulance', wrong: 'Car' } ],
+            'B': [ { emoji: '🍌', answer: 'Banana', wrong: 'Apple' }, { emoji: '🐻', answer: 'Bear', wrong: 'Cat' }, { emoji: '🎈', answer: 'Balloon', wrong: 'Box' } ],
+            'C': [ { emoji: '🐱', answer: 'Cat', wrong: 'Fish' }, { emoji: '🚗', answer: 'Car', wrong: 'Bus' }, { emoji: '🍰', answer: 'Cake', wrong: 'Egg' } ],
+            'D': [ { emoji: '🐶', answer: 'Dog', wrong: 'Bird' }, { emoji: '🦆', answer: 'Duck', wrong: 'Lion' }, { emoji: '🍩', answer: 'Donut', wrong: 'Apple' } ],
+            'E': [ { emoji: '🐘', answer: 'Elephant', wrong: 'Ant' }, { emoji: '🥚', answer: 'Egg', wrong: 'Cake' }, { emoji: '👁️', answer: 'Eye', wrong: 'Nose' } ],
+            'F': [ { emoji: '🐟', answer: 'Fish', wrong: 'Bird' }, { emoji: '🐸', answer: 'Frog', wrong: 'Cat' }, { emoji: '🌹', answer: 'Flower', wrong: 'Tree' } ],
+            'G': [ { emoji: '🦒', answer: 'Giraffe', wrong: 'Dog' }, { emoji: '🍇', answer: 'Grape', wrong: 'Orange' }, { emoji: '🐐', answer: 'Goat', wrong: 'Cow' } ],
+            'H': [ { emoji: '🐎', answer: 'Horse', wrong: 'Pig' }, { emoji: '🏠', answer: 'House', wrong: 'Car' }, { emoji: '👒', answer: 'Hat', wrong: 'Shoe' } ],
+            'I': [ { emoji: '🍦', answer: 'Ice Cream', wrong: 'Milk' }, { emoji: '🐜', answer: 'Insect', wrong: 'Bird' }, { emoji: '🛖', answer: 'Igloo', wrong: 'Tent' } ],
+            'J': [ { emoji: '🍹', answer: 'Juice', wrong: 'Water' }, { emoji: '👟', answer: 'Jump', wrong: 'Sleep' }, { emoji: '🫙', answer: 'Jar', wrong: 'Cup' } ],
+            'K': [ { emoji: '🐨', answer: 'Koala', wrong: 'Panda' }, { emoji: '🪁', answer: 'Kite', wrong: 'Ball' }, { emoji: '🔑', answer: 'Key', wrong: 'Lock' } ],
+            'L': [ { emoji: '🦁', answer: 'Lion', wrong: 'Tiger' }, { emoji: '🍋', answer: 'Lemon', wrong: 'Apple' }, { emoji: '🪜', answer: 'Ladder', wrong: 'Door' } ],
+            'M': [ { emoji: '🐒', answer: 'Monkey', wrong: 'Zebra' }, { emoji: '🥛', answer: 'Milk', wrong: 'Juice' }, { emoji: '🌙', answer: 'Moon', wrong: 'Sun' } ],
+            'N': [ { emoji: '👃', answer: 'Nose', wrong: 'Eye' }, { emoji: '📓', answer: 'Notebook', wrong: 'Toy' }, { emoji: '🪺', answer: 'Nest', wrong: 'Egg' } ],
+            'O': [ { emoji: '🍊', answer: 'Orange', wrong: 'Grape' }, { emoji: '🐙', answer: 'Octopus', wrong: 'Fish' }, { emoji: '🧅', answer: 'Onion', wrong: 'Carrot' } ],
+            'P': [ { emoji: '🐧', answer: 'Penguin', wrong: 'Lion' }, { emoji: '🍕', answer: 'Pizza', wrong: 'Donut' }, { emoji: '🖊️', answer: 'Pen', wrong: 'Key' } ],
+            'Q': [ { emoji: '👸', answer: 'Queen', wrong: 'King' }, { emoji: '🧶', answer: 'Quilt', wrong: 'Hat' }, { emoji: '❓', answer: 'Question', wrong: 'Answer' } ],
+            'R': [ { emoji: '🐰', answer: 'Rabbit', wrong: 'Cat' }, { emoji: '🤖', answer: 'Robot', wrong: 'Doll' }, { emoji: '🌈', answer: 'Rainbow', wrong: 'Cloud' } ],
+            'S': [ { emoji: '☀️', answer: 'Sun', wrong: 'Moon' }, { emoji: '🐍', answer: 'Snake', wrong: 'Fish' }, { emoji: '🚢', answer: 'Ship', wrong: 'Plane' } ],
+            'T': [ { emoji: '🐯', answer: 'Tiger', wrong: 'Cat' }, { emoji: '🍅', answer: 'Tomato', wrong: 'Apple' }, { emoji: '🌳', answer: 'Tree', wrong: 'Flower' } ],
+            'U': [ { emoji: '☂️', answer: 'Umbrella', wrong: 'Hat' }, { emoji: '🦄', answer: 'Unicorn', wrong: 'Horse' }, { emoji: '🆙', answer: 'Up', wrong: 'Down' } ],
+            'V': [ { emoji: '🎻', answer: 'Violin', wrong: 'Piano' }, { emoji: '🚐', answer: 'Van', wrong: 'Truck' }, { emoji: '🏺', answer: 'Vase', wrong: 'Cup' } ],
+            'W': [ { emoji: '🐳', answer: 'Whale', wrong: 'Shark' }, { emoji: '🍉', answer: 'Watermelon', wrong: 'Banana' }, { emoji: '⌚', answer: 'Watch', wrong: 'Phone' } ],
+            'X': [ { emoji: '🩻', answer: 'X-ray', wrong: 'Hand' }, { emoji: '🎹', answer: 'Xylophone', wrong: 'Guitar' }, { emoji: '🎄', answer: 'Xmas Tree', wrong: 'Flower' } ],
+            'Y': [ { emoji: '⛵', answer: 'Yacht', wrong: 'Ship' }, { emoji: '🟡', answer: 'Yellow', wrong: 'Red' }, { emoji: '🪀', answer: 'Yo-yo', wrong: 'Ball' } ],
+            'Z': [ { emoji: '🦓', answer: 'Zebra', wrong: 'Horse' }, { emoji: '🤐', answer: 'Zipper', wrong: 'Button' }, { emoji: '⚡', answer: 'Zigzag', wrong: 'Line' } ]
+        };
+
+        // --- 遊戲邏輯 ---
+        let gameSequence = [];
+        let currentIndex = 0;
+        let currentEnergy = 100;
+        let isGameActive = true;
+
+        // 語音功能設定
+        const synth = window.speechSynthesis;
+        function speakCurrentWord() {
+            if (!isGameActive) return;
+            const word = gameSequence[currentIndex].answer;
+            const utter = new SpeechSynthesisUtterance(word);
+            utter.lang = 'en-US'; // 設定為美式英文
+            utter.rate = 0.8;    // 稍微慢一點，適合小朋友
+            synth.cancel();      // 取消之前的朗讀
+            synth.speak(utter);
+        }
+
+        function initGame() {
+            gameSequence = [];
+            const letters = Object.keys(masterLibrary).sort();
+            letters.forEach(char => {
+                const options = masterLibrary[char];
+                const randomChoice = options[Math.floor(Math.random() * options.length)];
+                gameSequence.push({ ...randomChoice, letter: char });
+            });
+
+            currentIndex = 0;
+            currentEnergy = 100;
+            isGameActive = true;
+            document.getElementById('end-screen').style.display = 'none';
+            updateUI();
+            showQuestion();
+        }
+
+        function updateUI() {
+            document.getElementById('score-display').innerText = currentIndex;
+            document.getElementById('energy-text').innerText = Math.ceil(currentEnergy);
+            document.getElementById('progress-fill').style.width = (currentIndex / 26 * 100) + '%';
+        }
+
+        function showQuestion() {
+            if (currentIndex >= 26) {
+                showEnding('win');
+                return;
+            }
+            const q = gameSequence[currentIndex];
+            document.getElementById('letter-hint').innerText = "Letter " + q.letter;
+            document.getElementById('question-emoji').innerText = q.emoji;
+            document.getElementById('feedback-msg').style.opacity = '0';
+
+            const isLeftCorrect = Math.random() > 0.5;
+            const btnL = document.getElementById('btn-left');
+            const btnR = document.getElementById('btn-right');
+
+            btnL.innerText = isLeftCorrect ? q.answer : q.wrong;
+            btnL.dataset.correct = isLeftCorrect;
+            btnR.innerText = isLeftCorrect ? q.wrong : q.answer;
+            btnR.dataset.correct = !isLeftCorrect;
+
+            // 自動朗讀新題目單字
+            setTimeout(speakCurrentWord, 500);
+        }
+
+        function checkAnswer(idx) {
+            if (!isGameActive) return;
+            const btn = idx === 0 ? document.getElementById('btn-left') : document.getElementById('btn-right');
+            const feedback = document.getElementById('feedback-msg');
+            feedback.style.opacity = '1';
+
+            if (btn.dataset.correct === "true") {
+                currentIndex++;
+                feedback.innerText = "Super! ✨";
+                feedback.style.color = "#4CAF50";
+                animate('correct');
+                updateUI();
+                setTimeout(showQuestion, 1200);
+            } else {
+                currentEnergy -= 5;
+                feedback.innerText = "Try again! 加油！";
+                feedback.style.color = "#FF7043";
+                animate('wrong');
+                updateUI();
+                if (currentEnergy <= 0) showEnding('lose');
+            }
+        }
+
+        function animate(type) {
+            const el = document.getElementById('question-emoji');
+            if (type === 'correct') {
+                el.animate([{transform:'scale(1)'},{transform:'scale(1.2)'},{transform:'scale(1)'}], 300);
+            } else {
+                el.animate([{transform:'translateX(0)'},{transform:'translateX(-10px)'},{transform:'translateX(10px)'},{transform:'translateX(0)'}], 300);
+            }
+        }
+
+        function showEnding(type) {
+            isGameActive = false;
+            const screen = document.getElementById('end-screen');
+            screen.style.display = 'flex';
+            if (type === 'win') {
+                document.getElementById('end-title').innerText = "ABC Master! 🎓";
+                document.getElementById('end-message').innerText = "好棒喔！你學會了 26 個新單字！";
+                document.getElementById('end-emoji').innerText = "🎉";
+                startConfetti();
+            } else {
+                document.getElementById('end-title').innerText = "Time to Nap 😴";
+                document.getElementById('end-message').innerText = "沒電力了，我們先去休息一下吧！";
+                document.getElementById('end-emoji').innerText = "🛌";
+            }
+        }
+
+        function restartGame() { stopConfetti(); initGame(); }
+
+        let confInt;
+        function startConfetti() {
+            confInt = setInterval(() => {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = `hsl(${Math.random()*360}, 70%, 60%)`;
+                c.style.animationDuration = (Math.random()*2+2)+'s';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }, 100);
+        }
+        function stopConfetti() { clearInterval(confInt); document.querySelectorAll('.confetti').forEach(n => n.remove()); }
+
+        initGame();
+    </script>
 </body>
 </html>
